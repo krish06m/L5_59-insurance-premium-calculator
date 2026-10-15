@@ -23,7 +23,7 @@ Sorted by severity (High → Medium → Low). Every issue below has been fixed.
 | 6 | String `"no"` treated as smoker | Logic bug (no tool flags it) | 92, 22 | `calculatePremium(..., "no", ...)` was called. `"no"` is truthy, so a non-smoker paid the 1.3× loading (**7970** instead of **6900**). | Pass `False` in `main()`. `calculate_premium` now raises `TypeError` if `smoker` is not a `bool`. | Medium |
 | 7 | Discounts can make the premium negative | Logic bug | 25–26, 93 | Stacked discounts gave a life premium of **-800.0**. | Use `premium -= sum(discounts)` and clamp the result with `max(0.0, premium)`. | Medium |
 | 8 | Age ignores whether the birthday has happened yet | Logic bug | 30–34 | `today.year - born.year` is one year too high before the birthday. 31-12-1990 gave **36** instead of **35**. A future DOB gave a negative age. | Subtract `(today.month, today.day) < (born.month, born.day)`. Raise `ValueError` for a future DOB. | Medium |
-| 9 | Renewal crashes on 29 February | Logic bug | 79–81 | `date.replace(year=+1)` raises `ValueError` for `2024-02-29`. The variable `date` also shadows the `datetime.date` type. | Rename the variable to `start_date`. Catch `ValueError` and fall back to 28 February. | Medium |
+| 9 | Renewal crashes on 29 February | Logic bug | 79–81 | `date.replace(year=date.year + years)` raises `ValueError` for `2024-02-29`. The variable name `date` would also shadow `datetime.date`, which the fixed code imports. | Rename the variable to `start_date`. Catch `ValueError` and fall back to 28 February. | Medium |
 | 10 | Monthly instalment collects less than the premium | Logic bug | 67–71 | `math.floor(premium / months)` drops the remainder. For 8000/12, twelve payments of 666 total 7992. `months=0` silently returned the full premium, and negative months were accepted. | Round up to the next paisa with `math.ceil`, giving 666.67. Raise `ValueError` if `months <= 0`. | Medium |
 | 11 | Binding to all interfaces | Bandit B104 | 12 | `HOST = "0.0.0.0"` exposes the service on every network interface. | Use `127.0.0.1` by default. | Medium |
 | 12 | Insecure temp-file path | Bandit B108 | 14 | `/tmp/premium_quotes.log` is world-writable and predictable, so it is open to symlink attacks. | Write the log in the working directory (`premium_quotes.log`). | Medium |
@@ -42,13 +42,13 @@ Sorted by severity (High → Medium → Low). Every issue below has been fixed.
 
 | Output line | Before | After | Correct? |
 |-------------|--------|-------|----------|
-| Quote 2 (same details as Quote 1) | 5500.0 | 6000.0 | ✅ matches Quote 1 |
-| Non-smoker aged 50 | 7970.0 | 6900.0 | ✅ no smoker loading |
-| Life with stacked discounts | -800.0 | 0.0 | ✅ never negative |
-| Age from DOB 31-12-1990 (on 2026-10-15) | 36 | 35 | ✅ birthday not reached |
-| Monthly instalment (6900 / 12) | 575 | 575.0 | ✅ (and 8000/12 → 666.67, not 666) |
-| Authorised | True (hard-coded token) | False unless `UNDERWRITER_TOKEN` is set | ✅ |
-| Server would listen on | 0.0.0.0 | 127.0.0.1 | ✅ |
+| Quote 2 (same details as Quote 1) | 5500.0 | 6000.0 | Yes, matches Quote 1 |
+| Non-smoker aged 50 | 7970.0 | 6900.0 | Yes, no smoker loading |
+| Life with stacked discounts | -800.0 | 0.0 | Yes, never negative |
+| Age from DOB 31-12-1990 (on 2026-10-15) | 36 | 35 | Yes, birthday not reached |
+| Monthly instalment | 664 (7970 / 12, floored) | 575.0 (6900 / 12) | Yes, rounds up (8000 / 12 → 666.67, not 666) |
+| Authorised | True (hard-coded token) | False unless `UNDERWRITER_TOKEN` is set | Yes |
+| Server would listen on | 0.0.0.0 | 127.0.0.1 | Yes |
 
 ## Suppressions
 
